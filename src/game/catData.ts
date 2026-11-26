@@ -12,8 +12,8 @@ export const BOARD_SIZE = 16; // 4x4 grid
 export const CAT_TIERS: CatTier[] = [
   {
     level: 1,
-    name: 'Котёнок Моти',
-    title: 'Мягкий старт',
+    name: 'Mochi Kitten',
+    title: 'Soft Starter',
     bodyColor: '#FFFDF7',
     bellyColor: '#FFF0E5',
     accentColor: '#FF7B6B',
@@ -26,8 +26,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 2,
-    name: 'Рыжий Полосатик',
-    title: 'Шкодный тигрёнок',
+    name: 'Ginger Tabby',
+    title: 'Playful Tiger',
     bodyColor: '#FFA959',
     bellyColor: '#FFF4E0',
     accentColor: '#48A9A6',
@@ -40,8 +40,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 3,
-    name: 'Сиамский Принц',
-    title: 'Голубоглазый аристократ',
+    name: 'Siamese Prince',
+    title: 'Blue-Eyed Noble',
     bodyColor: '#EFE4D4',
     bellyColor: '#FAF6F0',
     accentColor: '#5B6C8F',
@@ -54,8 +54,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 4,
-    name: 'Плюшевый Дым',
-    title: 'Облачный британец',
+    name: 'Plush Smoke',
+    title: 'Cloud British',
     bodyColor: '#9AA8BC',
     bellyColor: '#DFE5EE',
     accentColor: '#FFAA33',
@@ -68,8 +68,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 5,
-    name: 'Сёгун Мяу',
-    title: 'Защитник доски',
+    name: 'Shogun Meow',
+    title: 'Board Guardian',
     bodyColor: '#3B4252',
     bellyColor: '#ECEFF4',
     accentColor: '#E63946',
@@ -82,8 +82,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 6,
-    name: 'Кибер-Кот 2002',
-    title: 'Цифровой неон PS2',
+    name: 'Cyber Neko 2002',
+    title: 'PS2 Neon Core',
     bodyColor: '#2B3040',
     bellyColor: '#535D78',
     accentColor: '#00D2D3',
@@ -96,8 +96,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 7,
-    name: 'Космо-Нэко',
-    title: 'Орбитальный пилот',
+    name: 'Astro Neko',
+    title: 'Orbital Pilot',
     bodyColor: '#F4F7FC',
     bellyColor: '#DCE4F2',
     accentColor: '#FF6B35',
@@ -110,8 +110,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 8,
-    name: 'Золотой Манэки',
-    title: 'Магнит богатства',
+    name: 'Golden Maneki',
+    title: 'Fortune Magnet',
     bodyColor: '#FFD147',
     bellyColor: '#FFF7D6',
     accentColor: '#E63946',
@@ -124,8 +124,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 9,
-    name: 'Император Нефрит',
-    title: 'Владыка лотоса',
+    name: 'Jade Emperor',
+    title: 'Lotus Sovereign',
     bodyColor: '#2EC4B6',
     bellyColor: '#CBF3F0',
     accentColor: '#FFB703',
@@ -138,8 +138,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 10,
-    name: 'Призрачный Нэко',
-    title: 'Двухвостый дух',
+    name: 'Phantom Neko',
+    title: 'Twin-Tail Spirit',
     bodyColor: '#D8D4F2',
     bellyColor: '#F5F3FF',
     accentColor: '#8338EC',
@@ -152,8 +152,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 11,
-    name: 'Кристальный Титан',
-    title: 'Призма из полигонов',
+    name: 'Crystal Titan',
+    title: 'Polygon Prism',
     bodyColor: '#56CFE1',
     bellyColor: '#CAF0F8',
     accentColor: '#3A86FF',
@@ -166,8 +166,8 @@ export const CAT_TIERS: CatTier[] = [
   },
   {
     level: 12,
-    name: 'Легендарный Котобог',
-    title: 'Абсолютная форма',
+    name: 'Mythic Cat Deity',
+    title: 'Ultimate Form',
     bodyColor: '#FFF8E7',
     bellyColor: '#FFFFFF',
     accentColor: '#F7B801',
@@ -183,7 +183,7 @@ export const CAT_TIERS: CatTier[] = [
 export const BOARD_THEMES: BoardTheme[] = [
   {
     id: 'ps2_silver',
-    name: 'PS2 Серебро',
+    name: 'PS2 Silver',
     priceGems: 0,
     bgHex: '#E6EAF2',
     fogHex: '#E6EAF2',
@@ -195,7 +195,7 @@ export const BOARD_THEMES: BoardTheme[] = [
   },
   {
     id: 'shibuya_cream',
-    name: 'Сибуя Крем',
+    name: 'Shibuya Cream',
     priceGems: 40,
     bgHex: '#F3ECE2',
     fogHex: '#F3ECE2',
@@ -207,7 +207,7 @@ export const BOARD_THEMES: BoardTheme[] = [
   },
   {
     id: 'midnight_indigo',
-    name: 'Ночной Токио',
+    name: 'Midnight Tokyo',
     priceGems: 80,
     bgHex: '#151926',
     fogHex: '#151926',
@@ -222,63 +222,63 @@ export const BOARD_THEMES: BoardTheme[] = [
 export const MISSIONS: MissionDef[] = [
   {
     id: 'merge_5',
-    title: 'Первые шаги: сделай 5 слияний',
+    title: 'First Steps: Complete 5 merges',
     target: 5,
     rewardGems: 15,
     type: 'merges',
   },
   {
     id: 'mouse_2',
-    title: 'Охотник: поймай 2 Золотых Мышей',
+    title: 'Mouse Hunter: Catch 2 Golden Mice',
     target: 2,
     rewardGems: 25,
     type: 'mice',
   },
   {
     id: 'merge_25',
-    title: 'Мастер слияния: 25 объединений',
+    title: 'Merge Master: Complete 25 merges',
     target: 25,
     rewardGems: 35,
     type: 'merges',
   },
   {
     id: 'mouse_8',
-    title: 'Гроза грызунов: поймай 8 Мышей',
+    title: 'Feline Reflex: Catch 8 Golden Mice',
     target: 8,
     rewardGems: 50,
     type: 'mice',
   },
   {
     id: 'merge_100',
-    title: 'Полигональный магнат: 100 слияний',
+    title: 'Low-Poly Tycoon: Complete 100 merges',
     target: 100,
     rewardGems: 80,
     type: 'merges',
   },
   {
     id: 'level_5',
-    title: 'Открой Сёгуна Мяу (5 уровень)',
+    title: 'Unlock Shogun Meow (Tier 5)',
     target: 5,
     rewardGems: 30,
     type: 'maxLevel',
   },
   {
     id: 'level_8',
-    title: 'Открой Золотого Манэки (8 уровень)',
+    title: 'Unlock Golden Maneki (Tier 8)',
     target: 8,
     rewardGems: 65,
     type: 'maxLevel',
   },
   {
     id: 'taps_30',
-    title: 'Погладь котов 30 раз',
+    title: 'Pet your cats 30 times',
     target: 30,
     rewardGems: 20,
     type: 'taps',
   },
   {
     id: 'crates_10',
-    title: 'Распакуй 10 посылок',
+    title: 'Unbox 10 Mystery Crates',
     target: 10,
     rewardGems: 25,
     type: 'crates',
@@ -288,35 +288,35 @@ export const MISSIONS: MissionDef[] = [
 export const DAILY_MISSIONS: DailyMissionDef[] = [
   {
     id: 'dm_merges',
-    title: 'Слей котов 15 раз',
+    title: 'Merge cats 15 times',
     target: 15,
     rewardGems: 25,
     type: 'merges',
   },
   {
     id: 'dm_crates',
-    title: 'Распакуй 8 посылок',
+    title: 'Open 8 Mystery Crates',
     target: 8,
     rewardGems: 20,
     type: 'crates',
   },
   {
     id: 'dm_taps',
-    title: 'Погладь котов 20 раз',
+    title: 'Pet cats 20 times',
     target: 20,
     rewardGems: 15,
     type: 'taps',
   },
   {
     id: 'dm_asmr',
-    title: 'Релакс-тайм: 12 тапов по мылу или поп-иту',
+    title: 'ASMR Break: 12 Soap or Pop-It taps',
     target: 12,
     rewardGems: 20,
     type: 'asmr',
   },
   {
     id: 'dm_ads',
-    title: 'Включи 2 видео-буста для ускорения',
+    title: 'Use 2 Video Boosts to speed up',
     target: 2,
     rewardGems: 30,
     rewardTickets: 1,
@@ -325,22 +325,22 @@ export const DAILY_MISSIONS: DailyMissionDef[] = [
 ];
 
 export const CAT_QUIPS: string[] = [
-  'Мурр! Ещё погладь!',
-  'Где моя рыбка?',
-  'PS2 полигоны рулят!',
-  'Ночной тыгыдык готов!',
-  'Слей меня в легенду!',
-  'Лови Золотую Мышь!',
-  'Я тут главный босс',
-  'Кот-инвестор в деле',
-  'Лапки приносят кэш',
-  'Мяу-лихорадка близко!',
+  'Purr! Pet me more!',
+  'Where is my fish?',
+  'PS2 polygons rule!',
+  'Zoomies mode ready!',
+  'Merge me to legend!',
+  'Catch the Golden Mouse!',
+  'I run this board now',
+  'Cat-vestor on duty',
+  'Paws print cash',
+  'Meow Fever is close!',
 ];
 
 export const WHEEL_SECTORS: WheelSector[] = [
   {
     id: 'coins_small',
-    label: '+25с дохода',
+    label: '+25s Income',
     color: '#3B66F5',
     textColor: '#FFFFFF',
     kind: 'coins',
@@ -348,7 +348,7 @@ export const WHEEL_SECTORS: WheelSector[] = [
   },
   {
     id: 'gems_15',
-    label: '+15 Самоцв.',
+    label: '+15 Gems',
     color: '#0FA968',
     textColor: '#FFFFFF',
     kind: 'gems',
@@ -356,7 +356,7 @@ export const WHEEL_SECTORS: WheelSector[] = [
   },
   {
     id: 'boost_3x',
-    label: 'x3 Доход 45с',
+    label: '3x Income 45s',
     color: '#F59E0B',
     textColor: '#171B26',
     kind: 'boost_3x',
@@ -364,7 +364,7 @@ export const WHEEL_SECTORS: WheelSector[] = [
   },
   {
     id: 'auto_merge',
-    label: '+2 Авто-слиян.',
+    label: '+2 Auto-Merge',
     color: '#6366F1',
     textColor: '#FFFFFF',
     kind: 'auto_merge',
@@ -372,7 +372,7 @@ export const WHEEL_SECTORS: WheelSector[] = [
   },
   {
     id: 'bonus_cat',
-    label: 'Кот +2 Ур.',
+    label: 'Cat +2 Tiers',
     color: '#EC4899',
     textColor: '#FFFFFF',
     kind: 'bonus_cat',
@@ -380,7 +380,7 @@ export const WHEEL_SECTORS: WheelSector[] = [
   },
   {
     id: 'jackpot',
-    label: 'ДЖЕКПОТ +50 С',
+    label: 'JACKPOT +50 G',
     color: '#FFD147',
     textColor: '#171B26',
     kind: 'jackpot',
@@ -389,13 +389,13 @@ export const WHEEL_SECTORS: WheelSector[] = [
 ];
 
 export const DAILY_REWARDS: DailyRewardDef[] = [
-  { day: 1, label: '+250 Монет', kind: 'coins', amount: 250 },
-  { day: 2, label: '+20 Самоцв.', kind: 'gems', amount: 20 },
-  { day: 3, label: '+2 Авто-слиян.', kind: 'auto_merge', amount: 2 },
-  { day: 4, label: '+40 Самоцв.', kind: 'gems', amount: 40 },
-  { day: 5, label: 'Кот +2 Ур.', kind: 'bonus_cat', amount: 2 },
-  { day: 6, label: '+75 Самоцв.', kind: 'gems', amount: 75 },
-  { day: 7, label: '+150 Самоцв.', kind: 'gems', amount: 150 },
+  { day: 1, label: '+250 Coins', kind: 'coins', amount: 250 },
+  { day: 2, label: '+20 Gems', kind: 'gems', amount: 20 },
+  { day: 3, label: '+2 Auto-Merge', kind: 'auto_merge', amount: 2 },
+  { day: 4, label: '+40 Gems', kind: 'gems', amount: 40 },
+  { day: 5, label: 'Cat +2 Tiers', kind: 'bonus_cat', amount: 2 },
+  { day: 6, label: '+75 Gems', kind: 'gems', amount: 75 },
+  { day: 7, label: '+150 Gems', kind: 'gems', amount: 150 },
 ];
 
 export function formatCoins(value: number): string {

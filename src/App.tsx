@@ -43,14 +43,14 @@ import {
   getUpgradeCost,
 } from './game/catData';
 import {
-  initYandexSdk,
+  initCrazyGamesSdk,
   notifyGameplayStart,
   notifyGameplayStop,
-  notifyYandexLoadingReady,
+  notifyHappyTime,
   safeLoadStorage,
   safeSaveStorage,
-  showYandexFullscreenAd,
-  showYandexRewardedVideo,
+  showCrazyMidgameAd,
+  showCrazyRewardedAd,
 } from './game/portalBridge';
 import { SceneController } from './game/SceneController';
 import {
@@ -215,30 +215,43 @@ export default function App() {
   const adPausedRef = useRef(false);
   const hiddenPausedRef = useRef(false);
   const hardPausedRef = useRef(false);
-  const gameStartedAtRef = useRef<number>(Date.now());
-  const lastInterstitialAtRef = useRef<number>(0);
+  const activeModalRef = useRef<ActiveModal>(activeModal);
+  const mobileMenuOpenRef = useRef(mobileMenuOpen);
+  activeModalRef.current = activeModal;
+  mobileMenuOpenRef.current = mobileMenuOpen;
 
-  const syncHardPause = useCallback(() => {
-    const paused = adPausedRef.current || hiddenPausedRef.current;
-    hardPausedRef.current = paused;
-    soundEngine.setBackgroundPaused(paused);
-    sceneRef.current?.setPaused(paused);
+  const gameStartedAtRef = useRef<number>(Date.now());
+  const lastMidgameAdAtRef = useRef<number>(0);
+
+  const syncLifecycleAndPause = useCallback(() => {
+    const hardPaused = adPausedRef.current || hiddenPausedRef.current;
+    hardPausedRef.current = hardPaused;
+    soundEngine.setBackgroundPaused(hardPaused);
+    sceneRef.current?.setPaused(hardPaused);
+
+    const menuOpen = activeModalRef.current !== null || mobileMenuOpenRef.current;
+    if (hardPaused || menuOpen) {
+      notifyGameplayStop();
+    } else {
+      notifyGameplayStart();
+    }
   }, []);
 
-  const showInterstitialWithCooldown = useCallback(async () => {
+  // Strict CrazyGames Midgame Cooldown: not earlier than 60s after launch, max once per 180s (3 min)
+  const showMidgameWithCooldown = useCallback(async () => {
     const now = Date.now();
     if (now - gameStartedAtRef.current < 60000) {
       return;
     }
-    if (lastInterstitialAtRef.current > 0 && now - lastInterstitialAtRef.current < 120000) {
+    if (lastMidgameAdAtRef.current > 0 && now - lastMidgameAdAtRef.current < 180000) {
       return;
     }
-    lastInterstitialAtRef.current = now;
-    await showYandexFullscreenAd((paused) => {
+    lastMidgameAdAtRef.current = now;
+    await showCrazyMidgameAd((paused) => {
       adPausedRef.current = paused;
-      syncHardPause();
+      syncLifecycleAndPause();
     });
-  }, [syncHardPause]);
+  }, [syncLifecycleAndPause]);
 
   const pushFloating = useCallback(
     (
@@ -273,14 +286,8 @@ export default function App() {
       soundEngine.unlockAudio();
     };
     const handleVisibility = () => {
-      const hidden = document.hidden;
-      hiddenPausedRef.current = hidden;
-      syncHardPause();
-      if (hidden) {
-        notifyGameplayStop();
-      } else {
-        notifyGameplayStart();
-      }
+      hiddenPausedRef.current = document.hidden;
+      syncLifecycleAndPause();
     };
 
     window.addEventListener('pointerdown', handleFirstGesture, { once: true });
@@ -291,19 +298,13 @@ export default function App() {
       window.removeEventListener('keydown', handleFirstGesture);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [syncHardPause]);
+  }, [syncLifecycleAndPause]);
 
-  // Hard pause audio + 3D scene while local fallback ad modal is open
+  // Sync CrazyGames gameplayStart/gameplayStop when opening/closing menus or local ad modal
   useEffect(() => {
-    const isAdModal = activeModal === 'ad';
-    adPausedRef.current = isAdModal;
-    syncHardPause();
-    if (isAdModal) {
-      notifyGameplayStop();
-    } else {
-      notifyGameplayStart();
-    }
-  }, [activeModal, syncHardPause]);
+    adPausedRef.current = activeModal === 'ad';
+    syncLifecycleAndPause();
+  }, [activeModal, mobileMenuOpen, syncLifecycleAndPause]);
 
   // Check offline earnings once on mount
   useEffect(() => {
@@ -320,7 +321,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist state safely (with iframe/portal storage fallback)
+  // Persist state safely (with iframe storage fallback)
   useEffect(() => {
     try {
       const toSave: GameState = { ...state, lastSavedAt: Date.now() };
@@ -371,7 +372,7 @@ export default function App() {
     return lastDay !== today;
   }, [state.lastDailyClaimAt, nowMs]);
 
-  // Initialize Three.js SceneController once
+  // Initialize Three.js SceneController & CrazyGames SDK v3
   useEffect(() => {
     const mount = canvasMountRef.current;
     if (!mount) return;
@@ -411,7 +412,7 @@ export default function App() {
             };
           });
           pushFloating(
-            `Ур. ${bonusLevel}!`,
+            `Tier ${bonusLevel}!`,
             screenPos.x,
             screenPos.y,
             'merge',
@@ -518,17 +519,18 @@ export default function App() {
           });
 
           if (isNewBreed) {
-            showToast(`Открыта новая порода: ${CAT_TIERS[newLevel - 1].name}!`);
+            showToast(`New Breed Unlocked: ${CAT_TIERS[newLevel - 1].name}!`);
             if (newLevel >= 4) {
-              void showInterstitialWithCooldown();
+              notifyHappyTime();
+              void showMidgameWithCooldown();
             }
           }
 
           const tier = CAT_TIERS[newLevel - 1];
           const label =
             nextCombo >= 2
-              ? `КОМБО x${nextCombo} · +${formatCoins(mergeReward)}`
-              : `Ур. ${newLevel} · +${formatCoins(mergeReward)}`;
+              ? `COMBO x${nextCombo} · +${formatCoins(mergeReward)}`
+              : `Tier ${newLevel} · +${formatCoins(mergeReward)}`;
           pushFloating(label, screenPos.x, screenPos.y, 'merge', tier?.name);
           return;
         }
@@ -562,13 +564,13 @@ export default function App() {
         }));
 
         pushFloating(
-          `+${formatCoins(coinBonus)} · +2 С · +1 Билет!`,
+          `+${formatCoins(coinBonus)} · +2 G · +1 Ticket!`,
           screenPos.x,
           screenPos.y,
           'mouse',
-          'Золотая Мышь поймана!',
+          'Golden Mouse Caught!',
         );
-        showToast('Мышь поймана! +Билет Колеса Удачи и +2 Самоцвета!');
+        showToast('Golden Mouse caught! +1 Lucky Ticket & +2 Gems!');
       },
       onAsmrTap: (mode, screenPos) => {
         const cur = stateRef.current;
@@ -596,11 +598,11 @@ export default function App() {
         });
 
         pushFloating(
-          zenReward ? `+${formatCoins(tinyBonus)} · +3 С Дзен!` : `+${formatCoins(tinyBonus)}`,
+          zenReward ? `+${formatCoins(tinyBonus)} · +3 G Zen!` : `+${formatCoins(tinyBonus)}`,
           screenPos.x,
           screenPos.y,
           zenReward ? 'gem' : 'coin',
-          mode === 'soap' ? 'Вжух!' : 'Поп!',
+          mode === 'soap' ? 'Slice!' : 'Pop!',
         );
       },
       onContextLost: () => setWebglLost(true),
@@ -612,19 +614,15 @@ export default function App() {
     controller.setPs2Filter(stateRef.current.ps2Filter);
     controller.setAsmrMode(stateRef.current.asmrMode);
 
-    // Initialize Yandex Games SDK and call LoadingAPI.ready() strictly once after 3D scene & UI are ready
-    void initYandexSdk().then(() => {
-      notifyYandexLoadingReady();
-      if (!document.hidden && !hardPausedRef.current) {
-        notifyGameplayStart();
-      }
+    void initCrazyGamesSdk().then(() => {
+      syncLifecycleAndPause();
     });
 
     return () => {
       controller.dispose();
       sceneRef.current = null;
     };
-  }, [pushFloating, showToast, showInterstitialWithCooldown]);
+  }, [pushFloating, showToast, showMidgameWithCooldown, syncLifecycleAndPause]);
 
   // Sync board, theme, PS2 filter, ASMR mode, fish rain & fever state
   useEffect(() => {
@@ -678,7 +676,6 @@ export default function App() {
       const rainOn = cur.fishRainUntil > t;
       const zoomiesOn = cur.zoomiesUntil > t;
 
-      // Advance crate progress timer smoothly (accelerated 2x by Ad Boost & Zoomies!)
       const baseIntervalMs = Math.max(3500, (10 - cur.upgrades.crateSpeedLevel) * 1000);
       const speedMult = (doubleOn ? 2 : 1) * (zoomiesOn ? 2 : 1);
       const hasSpace = cur.board.some((s) => s === null);
@@ -744,7 +741,7 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, []);
 
-  // Autonomous Random World Events Engine (happens naturally every ~22–32s)
+  // Autonomous Random World Events Engine
   useEffect(() => {
     let timeoutId = 0;
 
@@ -775,7 +772,7 @@ export default function App() {
         if (sceneRef.current?.spawnGoldenMouse()) {
           setMouseOnBoard(true);
           soundEngine.playMouseSqueak();
-          showToast('Случайное событие: Золотая Мышь на доске!');
+          showToast('Live Event: Golden Mouse spotted on the board!');
         }
       } else if (chosen === 'fish_rain') {
         const gift = Math.max(90, Math.round(computeBaseIncomePerSec(cur) * 8));
@@ -785,21 +782,21 @@ export default function App() {
           coins: prev.coins + gift,
           fishRainUntil: now + 14000,
         }));
-        showToast(`Случайное событие: Рыбный дождь x2.5 на 14с (+${formatCoins(gift)} М)!`);
+        showToast(`Live Event: Fish Rain x2.5 for 14s (+${formatCoins(gift)} C)!`);
       } else if (chosen === 'zoomies') {
         soundEngine.playFever();
         setState((prev) => ({
           ...prev,
           zoomiesUntil: now + 15000,
         }));
-        showToast('Случайное событие: Кошачий Тыгыдык! x2 доход и x2 скорость посылок!');
+        showToast('Live Event: Cat Zoomies! 2x income & 2x crate speed!');
       } else if (chosen === 'flash_sale') {
         soundEngine.playCoin();
         setState((prev) => ({
           ...prev,
           flashSaleUntil: now + 18000,
         }));
-        showToast('Случайное событие: Счастливый купон -30% на покупку котов (18с)!');
+        showToast('Live Event: Lucky Coupon -30% off cat purchases (18s)!');
       } else if (chosen === 'crate_drop') {
         if (emptyIndices.length > 0) {
           const count = Math.min(3, emptyIndices.length);
@@ -815,16 +812,15 @@ export default function App() {
             }
             return { ...prev, board: nb };
           });
-          showToast(`Случайное событие: Коробкопад! +${count} бесплатных посылки!`);
+          showToast(`Live Event: Crate Storm! +${count} free mystery crates!`);
         } else {
           const gift = Math.max(120, Math.round(computeBaseIncomePerSec(cur) * 12));
           soundEngine.playCoin();
           setState((prev) => ({ ...prev, coins: prev.coins + gift }));
-          showToast(`Случайный бонус: +${formatCoins(gift)} монет!`);
+          showToast(`Bonus Drop: +${formatCoins(gift)} Coins!`);
         }
       }
 
-      // Occasionally surface a tempting Stray Elite Cat Ad Offer when board has room
       if (emptyIndices.length >= 1 && cur.tutorialStep >= 2 && Math.random() < 0.55) {
         setStrayCatOfferUntil(Date.now() + 18000);
       }
@@ -848,13 +844,13 @@ export default function App() {
   const handleBuyCat = (level: number, isFromShop = false) => {
     const emptyIdx = state.board.findIndex((s) => s === null);
     if (emptyIdx < 0) {
-      showToast('Доска заполнена! Объедини котов или нажми Авто-слияние');
+      showToast('Board is full! Merge cats or use Auto-Merge');
       return;
     }
     const timesBought = state.purchasesPerLevel[level] || 0;
     const cost = getCatPurchasePrice(level, timesBought, state.flashSaleUntil > Date.now());
     if (state.coins < cost) {
-      showToast('Недостаточно монет!');
+      showToast('Not enough coins!');
       return;
     }
 
@@ -876,7 +872,7 @@ export default function App() {
     });
 
     if (isFromShop) {
-      showToast(`Кот Ур. ${level} добавлен на доску`);
+      showToast(`Tier ${level} cat added to board`);
     }
   };
 
@@ -902,16 +898,16 @@ export default function App() {
   const handleAutoMerge = () => {
     const pair = findMergePair(state.board);
     if (!pair) {
-      showToast('Нет одинаковых котов для слияния');
+      showToast('No matching cats available to merge');
       return;
     }
     if (state.autoMergeCharges <= 0 && state.gems < 10) {
       openRewardedAd({
         id: 'auto_merge',
-        title: 'Заряды Авто-слияния',
+        title: 'Auto-Merge Charges',
         description:
-          'Посмотри короткий ролик, чтобы получить +3 авто-слияния и +5 самоцветов.',
-        rewardLabel: '+3 Авто-слияния и +5 С',
+          'Watch a short rewarded video to get +3 Auto-Merges and +5 Bonus Gems.',
+        rewardLabel: '+3 Auto-Merges & +5 Gems',
       });
       return;
     }
@@ -928,7 +924,7 @@ export default function App() {
       y: window.innerHeight / 2,
     };
     pushFloating(
-      `Ур. ${newLevel} · +${formatCoins(reward)}`,
+      `Tier ${newLevel} · +${formatCoins(reward)}`,
       pos.x,
       pos.y,
       'merge',
@@ -963,10 +959,10 @@ export default function App() {
     setState((prev) => ({ ...prev, asmrMode: next }));
     showToast(
       next === 'soap'
-        ? 'Релакс сбоку: Резка мыла'
+        ? 'Side ASMR: Soap Slicing'
         : next === 'pop'
-          ? 'Релакс сбоку: Поп-Кубы'
-          : 'Боковой релакс скрыт',
+          ? 'Side ASMR: Pop Cubes'
+          : 'Side ASMR Hidden',
     );
   };
 
@@ -988,7 +984,7 @@ export default function App() {
         };
       });
       showToast(
-        `x2 Доход на 2 мин! Скорость посылок x2, +${formatCoins(instantBurst)} М и +5 С!`,
+        `x2 Income active for 2 min! 2x Crate Speed, +${formatCoins(instantBurst)} C & +5 G!`,
       );
     } else if (offer.id === 'crate_frenzy') {
       const emptyIndices: number[] = [];
@@ -1017,7 +1013,7 @@ export default function App() {
             dailyProgress: { ...base.dailyProgress, ads: base.dailyProgress.ads + 1 },
           };
         });
-        showToast(`Дождь посылок: высажено +${spawnTargets.length} котов/коробок и +5 С!`);
+        showToast(`Crate Frenzy: +${spawnTargets.length} cats/crates dropped & +5 G!`);
       } else {
         const fallbackCoins = Math.max(250, Math.round(curRate * 25));
         setState((prev) => {
@@ -1031,7 +1027,7 @@ export default function App() {
           };
         });
         showToast(
-          `Доска полная: +1 Авто-слияние, +${formatCoins(fallbackCoins)} М и +5 С!`,
+          `Board full: +1 Auto-Merge, +${formatCoins(fallbackCoins)} C & +5 G!`,
         );
       }
     } else if (offer.id === 'auto_merge') {
@@ -1044,7 +1040,7 @@ export default function App() {
           dailyProgress: { ...base.dailyProgress, ads: base.dailyProgress.ads + 1 },
         };
       });
-      showToast('Получено +3 Авто-слияния и +5 Самоцветов!');
+      showToast('Received +3 Auto-Merges & +5 Gems!');
     } else if (offer.id === 'spin_ticket') {
       setState((prev) => {
         const base = ensureDailyReset(prev);
@@ -1057,7 +1053,7 @@ export default function App() {
       });
       setAdOffer(null);
       setActiveModal('fortune');
-      showToast('Получен +1 билет Колеса Удачи и +5 Самоцветов!');
+      showToast('Received +1 Lucky Ticket & +5 Gems!');
       return;
     } else if (offer.id === 'bonus_cat') {
       const bonusLvl = Math.min(12, curState.upgrades.spawnLevel + 2);
@@ -1082,7 +1078,7 @@ export default function App() {
           dailyProgress: { ...base.dailyProgress, ads: base.dailyProgress.ads + 1 },
         };
       });
-      showToast(`Элитный кот Ур. ${bonusLvl} высажен на доску (+5 С)!`);
+      showToast(`Elite Tier ${bonusLvl} Cat deployed (+5 G)!`);
     } else if (offer.id === 'offline_double') {
       const amount = offlineCoins * 2;
       setState((prev) => {
@@ -1095,7 +1091,17 @@ export default function App() {
         };
       });
       setOfflineCoins(0);
-      showToast(`Оффлайн-доход удвоен: +${formatCoins(amount)} М и +5 С!`);
+      showToast(`Offline earnings doubled: +${formatCoins(amount)} C & +5 G!`);
+    } else if (offer.id === 'gem_pouch') {
+      setState((prev) => {
+        const base = ensureDailyReset(prev);
+        return {
+          ...base,
+          gems: base.gems + 40,
+          dailyProgress: { ...base.dailyProgress, ads: base.dailyProgress.ads + 1 },
+        };
+      });
+      showToast('Gem Pouch opened: +40 Gems!');
     }
 
     setAdOffer(null);
@@ -1103,24 +1109,21 @@ export default function App() {
   };
 
   const openRewardedAd = async (offer: RewardedAdOffer) => {
-    let rewardedViaCallback = false;
-    const portalResult = await showYandexRewardedVideo(
+    let rewardedInCallback = false;
+    const portalResult = await showCrazyRewardedAd(
       (paused) => {
         adPausedRef.current = paused;
-        syncHardPause();
+        syncLifecycleAndPause();
       },
       () => {
-        rewardedViaCallback = true;
+        rewardedInCallback = true;
         applyAdReward(offer);
       },
     );
-    if (portalResult === 'rewarded' || rewardedViaCallback) {
+    if (portalResult === 'rewarded' || rewardedInCallback) {
       return;
     }
-    if (portalResult === 'declined') {
-      showToast('Досмотри ролик до конца, чтобы получить награду');
-      return;
-    }
+    // Local standalone fallback preview when CrazyGames SDK is not present
     setAdOffer(offer);
     setActiveModal('ad');
   };
@@ -1162,7 +1165,7 @@ export default function App() {
       }
       return next;
     });
-    showToast(`Колесо Удачи: ${sector.label}!`);
+    showToast(`Lucky Wheel: ${sector.label}!`);
   };
 
   const handleClaimDaily = () => {
@@ -1196,13 +1199,14 @@ export default function App() {
       }
       return next;
     });
-    showToast(`Бонус дня получен: ${reward.label}!`);
+    showToast(`Daily Bonus Claimed: ${reward.label}!`);
   };
 
   const handlePrestige = async () => {
     const gain = getPendingGoldenFish(state.highestUnlockedLevel, state.totalMerges);
     if (gain <= 0) return;
-    await showInterstitialWithCooldown();
+    notifyHappyTime();
+    await showMidgameWithCooldown();
     soundEngine.playFever();
     setState((prev) =>
       createInitialState({
@@ -1232,7 +1236,7 @@ export default function App() {
       }),
     );
     setActiveModal(null);
-    showToast(`Кото-Нирвана! Получено +${gain} Золотых Рыбок (+${gain * 50}% навсегда)!`);
+    showToast(`Cat Nirvana! Earned +${gain} Golden Fish (+${gain * 50}% permanent)!`);
   };
 
   const handleBuyUpgrade = (
@@ -1267,26 +1271,17 @@ export default function App() {
   };
 
   const handleBuyVipPack = () => {
-    if (state.vipPackOwned) return;
+    if (state.vipPackOwned || state.gems < 80) return;
     soundEngine.playFever();
     setState((prev) => ({
       ...prev,
       vipPackOwned: true,
-      gems: prev.gems + 150,
+      gems: prev.gems - 80,
       autoMergeCharges: prev.autoMergeCharges + 5,
       spinTickets: prev.spinTickets + 3,
       coins: prev.coins + 25000,
     }));
-    showToast('Набор PS2 VIP Старт активирован!');
-  };
-
-  const handleBuyGemPack = (gems: number) => {
-    soundEngine.playCoin();
-    setState((prev) => ({
-      ...prev,
-      gems: prev.gems + gems,
-    }));
-    showToast(`Начислено +${gems} самоцветов!`);
+    showToast('PS2 VIP Starter Bundle activated!');
   };
 
   const handleClaimDiscovery = (level: number) => {
@@ -1298,7 +1293,7 @@ export default function App() {
       gems: prev.gems + reward,
       discoveredRewardsClaimed: [...prev.discoveredRewardsClaimed, level],
     }));
-    showToast(`Получено +${reward} самоцветов за породу!`);
+    showToast(`Breed Discovery Bonus: +${reward} Gems!`);
   };
 
   const handleClaimMission = (missionId: string) => {
@@ -1310,7 +1305,7 @@ export default function App() {
       gems: prev.gems + def.rewardGems,
       claimedMissions: [...prev.claimedMissions, missionId],
     }));
-    showToast(`Достижение выполнено: +${def.rewardGems} самоцветов!`);
+    showToast(`Achievement Completed: +${def.rewardGems} Gems!`);
   };
 
   const handleClaimDailyMission = (missionId: string) => {
@@ -1327,7 +1322,7 @@ export default function App() {
       };
     });
     showToast(
-      `Миссия дня: +${def.rewardGems} С${def.rewardTickets ? ` и +${def.rewardTickets} Билет!` : '!'}`,
+      `Daily Mission: +${def.rewardGems} G${def.rewardTickets ? ` & +${def.rewardTickets} Ticket!` : '!'}`,
     );
   };
 
@@ -1338,6 +1333,7 @@ export default function App() {
     );
     if (!completedAll) return;
     soundEngine.playFever();
+    notifyHappyTime();
     setState((prev) => {
       const base = ensureDailyReset(prev);
       return {
@@ -1347,16 +1343,16 @@ export default function App() {
         dailyChestClaimed: true,
       };
     });
-    showToast('Сундук дня открыт: +60 Самоцветов и +1 Билет Удачи!');
+    showToast('Daily Chest Opened: +60 Gems & +1 Lucky Ticket!');
   };
 
   const handleClaimOffline = (doubled: boolean) => {
     if (doubled) {
       void openRewardedAd({
         id: 'offline_double',
-        title: 'Удвоить оффлайн-доход',
-        description: `Посмотри короткий ролик, чтобы получить x2 монет (+${formatCoins(offlineCoins * 2)} М) и +5 Самоцветов!`,
-        rewardLabel: `+${formatCoins(offlineCoins * 2)} монет`,
+        title: 'Double Offline Earnings',
+        description: `Watch a short rewarded video to claim 2x coins (+${formatCoins(offlineCoins * 2)} C) and +5 Gems!`,
+        rewardLabel: `+${formatCoins(offlineCoins * 2)} Coins`,
       });
       return;
     }
@@ -1367,7 +1363,7 @@ export default function App() {
     }));
     setOfflineCoins(0);
     setActiveModal(null);
-    showToast(`Зачислено +${formatCoins(offlineCoins)} монет!`);
+    showToast(`Collected +${formatCoins(offlineCoins)} Coins!`);
   };
 
   const handleFinishTutorial = () => {
@@ -1377,7 +1373,7 @@ export default function App() {
       tutorialStep: 3,
       gems: prev.gems + 20,
     }));
-    showToast('Обучение пройдено! Награда: +20 Самоцветов!');
+    showToast('Tutorial complete! Reward: +20 Gems!');
   };
 
   const unclaimedCatalogCount = useMemo(() => {
@@ -1452,21 +1448,21 @@ export default function App() {
       {webglLost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#E6EAF2] p-6 text-center">
           <div className="max-w-sm rounded-xl border border-slate-900/10 bg-white p-6 shadow-lg">
-            <h2 className="font-display text-lg font-bold">Восстановление 3D-сцены</h2>
+            <h2 className="font-display text-lg font-bold">Restoring 3D Scene</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Графический контекст временно сброшен. Нажми обновить, чтобы продолжить игру.
+              Graphics context was temporarily reset. Click reload to continue playing.
             </p>
             <button
               onClick={() => window.location.reload()}
               className="mt-4 rounded-lg bg-[#3B66F5] px-4 py-2 text-sm font-semibold text-white"
             >
-              Обновить
+              Reload
             </button>
           </div>
         </div>
       )}
 
-      {/* Responsive & Collapsible Top HUD Bar (Laptops, Desktop PC, iPhone, Android) */}
+      {/* Responsive & Collapsible Top HUD Bar */}
       <header className="pointer-events-none fixed inset-x-0 top-0 z-20 flex flex-col gap-1.5 px-2.5 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))]">
         {topCollapsed ? (
           <div className="flex items-center justify-end">
@@ -1483,11 +1479,11 @@ export default function App() {
               <button
                 onClick={() => setTopCollapsed(false)}
                 className="flex min-h-[30px] items-center gap-1 rounded-lg px-1.5 text-xs font-semibold hover:bg-current/5 transition-colors whitespace-nowrap"
-                title="Показать верхнюю панель"
-                aria-label="Показать верхнюю панель"
+                title="Show top bar"
+                aria-label="Show top bar"
               >
                 <ChevronDown className="h-3.5 w-3.5" />
-                <span>Панель</span>
+                <span>HUD</span>
               </button>
             </div>
           </div>
@@ -1513,7 +1509,7 @@ export default function App() {
                     {formatCoins(state.coins)}
                   </span>
                   <span className="hidden sm:inline text-[11px] opacity-65 font-mono-num whitespace-nowrap">
-                    +{formatCoins(incomePerSec)}/с
+                    +{formatCoins(incomePerSec)}/s
                   </span>
                 </div>
 
@@ -1531,7 +1527,7 @@ export default function App() {
                     <span className="h-3.5 w-px bg-current/15" aria-hidden="true" />
                     <div
                       className="flex items-center gap-1 text-amber-500"
-                      title="Бонус Золотых Рыбок"
+                      title="Golden Fish Prestige Bonus"
                     >
                       <Fish className="h-3.5 w-3.5 shrink-0" />
                       <span className="font-mono-num text-xs font-bold">
@@ -1561,14 +1557,14 @@ export default function App() {
                     />
                   </div>
                   <span className="font-mono-num text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
-                    {feverActive ? `x2 · ${feverSecondsLeft}с` : 'Лихорадка'}
+                    {feverActive ? `x2 · ${feverSecondsLeft}s` : 'Fever'}
                   </span>
                 </div>
 
                 {/* Next Free Crate Visualizer */}
                 <div
                   className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 shadow-sm w-[132px] sm:w-[168px] ${hudSurface}`}
-                  title="Таймер следующей бесплатной посылки и заполненность доски"
+                  title="Next free mystery crate timer and board slots"
                 >
                   <Gift className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                   <div className="flex-1 h-1.5 rounded-full bg-current/12 overflow-hidden">
@@ -1578,45 +1574,45 @@ export default function App() {
                     />
                   </div>
                   <span className="font-mono-num text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
-                    {hasEmptySlot ? `${crateSecondsLeft}с` : `${occupiedCount}/16`}
+                    {hasEmptySlot ? `${crateSecondsLeft}s` : `${occupiedCount}/16`}
                   </span>
                 </div>
 
                 {comboActive && (
                   <div className="rounded-lg border border-amber-500/40 bg-amber-500 px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold font-mono-num text-slate-950 shadow-sm whitespace-nowrap">
-                    КОМБО x{comboCount}
+                    COMBO x{comboCount}
                   </div>
                 )}
 
                 {doubleActive && (
                   <div className="rounded-lg border border-emerald-500/40 bg-[#0FA968] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold font-mono-num text-white shadow-sm whitespace-nowrap">
-                    x2 Доход · {doubleSecondsLeft}с
+                    x2 Income · {doubleSecondsLeft}s
                   </div>
                 )}
 
                 {tripleActive && (
                   <div className="rounded-lg border border-emerald-500/40 bg-[#0FA968] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold font-mono-num text-white shadow-sm whitespace-nowrap">
-                    x3 · {tripleSecondsLeft}с
+                    x3 · {tripleSecondsLeft}s
                   </div>
                 )}
 
                 {fishRainActive && (
                   <div className="flex items-center gap-1 rounded-lg border border-sky-500/40 bg-sky-500 px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold font-mono-num text-white shadow-sm whitespace-nowrap">
                     <CloudRain className="h-3 w-3 shrink-0" />
-                    <span>Дождь x2.5 · {rainActiveLeft}с</span>
+                    <span>Rain x2.5 · {rainActiveLeft}s</span>
                   </div>
                 )}
 
                 {zoomiesActive && (
                   <div className="rounded-lg border border-pink-500/40 bg-pink-500 px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold font-mono-num text-white shadow-sm whitespace-nowrap">
-                    Тыгыдык x2 · {zoomiesActiveLeft}с
+                    Zoomies x2 · {zoomiesActiveLeft}s
                   </div>
                 )}
 
                 {flashSaleActive && (
                   <div className="flex items-center gap-1 rounded-lg border border-emerald-500/40 bg-[#0FA968] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold font-mono-num text-white shadow-sm whitespace-nowrap">
                     <Tag className="h-3 w-3 shrink-0" />
-                    <span>Скидка -30% · {flashSaleLeft}с</span>
+                    <span>-30% Off · {flashSaleLeft}s</span>
                   </div>
                 )}
               </div>
@@ -1637,7 +1633,7 @@ export default function App() {
                   }`}
                 >
                   <Sparkles className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">Удача</span>
+                  <span className="hidden sm:inline">Luck</span>
                   {state.spinTickets > 0 && (
                     <span className="font-mono-num">· {state.spinTickets}</span>
                   )}
@@ -1649,7 +1645,7 @@ export default function App() {
                   className={`hidden md:flex min-h-[40px] items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap ${hudSurface}`}
                 >
                   <BookOpen className="h-4 w-4" />
-                  <span>Каталог</span>
+                  <span>Index</span>
                   {unclaimedCatalogCount > 0 && (
                     <span className="font-mono-num text-emerald-600 dark:text-emerald-400 font-bold">
                       · {unclaimedCatalogCount}
@@ -1662,7 +1658,7 @@ export default function App() {
                   className={`hidden md:flex min-h-[40px] items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap ${hudSurface}`}
                 >
                   <Award className="h-4 w-4" />
-                  <span>Задания</span>
+                  <span>Missions</span>
                   {unclaimedMissionCount > 0 && (
                     <span className="font-mono-num text-emerald-600 dark:text-emerald-400 font-bold">
                       · {unclaimedMissionCount}
@@ -1678,7 +1674,7 @@ export default function App() {
                   className="flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#3B66F5] px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#2E55DC] transition-colors whitespace-nowrap"
                 >
                   <ShoppingBag className="h-4 w-4 shrink-0" />
-                  <span className="hidden sm:inline">Магазин</span>
+                  <span className="hidden sm:inline">Shop</span>
                 </button>
 
                 <button
@@ -1686,15 +1682,15 @@ export default function App() {
                   className={`hidden md:flex min-h-[40px] items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-sm transition-colors whitespace-nowrap ${
                     state.asmrMode !== 'off' ? hudSurface : 'opacity-55 ' + hudSurface
                   }`}
-                  title="Переключить релакс-анимацию сбоку (Мыло / Поп-Кубы / Выкл)"
+                  title="Switch side ASMR station (Soap / Pop Cubes / Off)"
                 >
                   <Scissors className="h-4 w-4 text-pink-500" />
                   <span className="hidden xl:inline">
                     {state.asmrMode === 'soap'
-                      ? 'Мыло'
+                      ? 'Soap'
                       : state.asmrMode === 'pop'
-                        ? 'Поп-Ит'
-                        : 'Релакс выкл'}
+                        ? 'Pop-It'
+                        : 'ASMR Off'}
                   </span>
                 </button>
 
@@ -1707,8 +1703,8 @@ export default function App() {
                       ? 'bg-[#3B66F5] text-white border-[#3B66F5]'
                       : hudSurface
                   }`}
-                  title={state.ambientEnabled ? 'Выключить эмбиент' : 'Включить вайбовый эмбиент'}
-                  aria-label="Переключить эмбиент-музыку"
+                  title={state.ambientEnabled ? 'Mute ambient music' : 'Enable chill ambient'}
+                  aria-label="Toggle ambient music"
                 >
                   <Music className="h-4 w-4" />
                 </button>
@@ -1722,7 +1718,7 @@ export default function App() {
                       ? 'bg-[#3B66F5] text-white border-[#3B66F5]'
                       : hudSurface
                   }`}
-                  title="Переключить ретро PS2-режим"
+                  title="Toggle retro PS2 CRT mode"
                 >
                   <Monitor className="h-4 w-4" />
                   <span className="hidden xl:inline">PS2</span>
@@ -1731,8 +1727,8 @@ export default function App() {
                 <button
                   onClick={() => sceneRef.current?.toggleCameraAngle()}
                   className={`hidden md:flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-opacity hover:opacity-85 ${hudSurface}`}
-                  title="Сменить ракурс камеры"
-                  aria-label="Сменить ракурс камеры"
+                  title="Switch camera angle"
+                  aria-label="Switch camera angle"
                 >
                   <Camera className="h-4 w-4" />
                 </button>
@@ -1740,8 +1736,8 @@ export default function App() {
                 <button
                   onClick={() => setState((prev) => ({ ...prev, muted: !prev.muted }))}
                   className={`hidden md:flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-opacity hover:opacity-85 ${hudSurface}`}
-                  title={state.muted ? 'Включить звук' : 'Выключить звук'}
-                  aria-label={state.muted ? 'Включить звук' : 'Выключить звук'}
+                  title={state.muted ? 'Unmute audio' : 'Mute audio'}
+                  aria-label={state.muted ? 'Unmute audio' : 'Mute audio'}
                 >
                   {state.muted ? (
                     <VolumeX className="h-4 w-4" />
@@ -1753,18 +1749,18 @@ export default function App() {
                 <button
                   onClick={() => setState((prev) => ({ ...prev, tutorialStep: 0 }))}
                   className={`hidden md:flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm transition-opacity hover:opacity-85 ${hudSurface}`}
-                  title="Показать обучение"
-                  aria-label="Показать обучение"
+                  title="Show tutorial"
+                  aria-label="Show tutorial"
                 >
                   <HelpCircle className="h-4 w-4" />
                 </button>
 
-                {/* Mobile Compact Menu Button (< md: iPhones & Androids) */}
+                {/* Mobile Compact Menu Button */}
                 <button
                   onClick={() => setMobileMenuOpen((v) => !v)}
                   className={`md:hidden relative flex h-[40px] items-center gap-1 rounded-xl border px-2.5 text-xs font-semibold shadow-sm ${hudSurface}`}
-                  aria-label="Открыть меню"
-                  title="Меню"
+                  aria-label="Open menu"
+                  title="Menu"
                 >
                   {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
                   {totalMenuAlerts > 0 && !mobileMenuOpen && (
@@ -1774,21 +1770,21 @@ export default function App() {
                   )}
                 </button>
 
-                {/* Collapse Top Panel Button (All Devices) */}
+                {/* Collapse Top Panel Button */}
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
                     setTopCollapsed(true);
                   }}
                   className={`flex h-[40px] w-[40px] items-center justify-center rounded-xl border shadow-sm transition-opacity hover:opacity-85 ${hudSurface}`}
-                  title="Скрыть верхнюю панель"
-                  aria-label="Скрыть верхнюю панель"
+                  title="Hide top panel"
+                  aria-label="Hide top panel"
                 >
                   <ChevronUp className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Mobile Compact Popover Menu (Only opens when tapped) */}
+              {/* Mobile Compact Popover Menu */}
               {mobileMenuOpen && (
                 <div
                   className={`md:hidden w-[238px] rounded-2xl border p-2 shadow-xl grid grid-cols-2 gap-1.5 ${hudSurface}`}
@@ -1801,7 +1797,7 @@ export default function App() {
                     className="flex min-h-[42px] items-center gap-2 rounded-xl border border-current/10 px-2.5 text-xs font-semibold hover:bg-current/5"
                   >
                     <BookOpen className="h-4 w-4 shrink-0" />
-                    <span>Каталог</span>
+                    <span>Index</span>
                     {unclaimedCatalogCount > 0 && (
                       <span className="ml-auto font-mono-num text-emerald-500 font-bold">
                         {unclaimedCatalogCount}
@@ -1817,7 +1813,7 @@ export default function App() {
                     className="flex min-h-[42px] items-center gap-2 rounded-xl border border-current/10 px-2.5 text-xs font-semibold hover:bg-current/5"
                   >
                     <Award className="h-4 w-4 shrink-0" />
-                    <span>Задания</span>
+                    <span>Missions</span>
                     {unclaimedMissionCount > 0 && (
                       <span className="ml-auto font-mono-num text-emerald-500 font-bold">
                         {unclaimedMissionCount}
@@ -1832,10 +1828,10 @@ export default function App() {
                     <Scissors className="h-4 w-4 text-pink-500 shrink-0" />
                     <span>
                       {state.asmrMode === 'soap'
-                        ? 'Мыло'
+                        ? 'Soap'
                         : state.asmrMode === 'pop'
-                          ? 'Поп-Ит'
-                          : 'Выкл'}
+                          ? 'Pop-It'
+                          : 'Off'}
                     </span>
                   </button>
 
@@ -1853,7 +1849,7 @@ export default function App() {
                     }`}
                   >
                     <Music className="h-4 w-4 shrink-0" />
-                    <span>Эмбиент</span>
+                    <span>Ambient</span>
                   </button>
 
                   <button
@@ -1878,7 +1874,7 @@ export default function App() {
                     className="flex min-h-[42px] items-center gap-2 rounded-xl border border-current/10 px-2.5 text-xs font-semibold hover:bg-current/5"
                   >
                     <Camera className="h-4 w-4 shrink-0" />
-                    <span>Ракурс</span>
+                    <span>Camera</span>
                   </button>
 
                   <button
@@ -1892,7 +1888,7 @@ export default function App() {
                     ) : (
                       <Volume2 className="h-4 w-4 shrink-0" />
                     )}
-                    <span>{state.muted ? 'Без звука' : 'Звук'}</span>
+                    <span>{state.muted ? 'Muted' : 'Sound'}</span>
                   </button>
 
                   <button
@@ -1903,7 +1899,7 @@ export default function App() {
                     className="flex min-h-[42px] items-center gap-2 rounded-xl border border-current/10 px-2.5 text-xs font-semibold hover:bg-current/5"
                   >
                     <HelpCircle className="h-4 w-4 shrink-0" />
-                    <span>Обучение</span>
+                    <span>Guide</span>
                   </button>
                 </div>
               )}
@@ -1912,7 +1908,7 @@ export default function App() {
         )}
       </header>
 
-      {/* Simple Beginner Onboarding Tutorial (Steps 0, 1, 2) */}
+      {/* Beginner Onboarding Tutorial (Steps 0, 1, 2) */}
       {state.tutorialStep < 3 && (
         <div
           className={`pointer-events-none fixed left-1/2 z-25 w-[92vw] max-w-md -translate-x-1/2 transition-all ${
@@ -1926,15 +1922,15 @@ export default function App() {
           >
             <div className="min-w-0">
               <div className="text-[11px] font-bold text-[#3B66F5] dark:text-[#60A5FA]">
-                Обучение · Шаг {state.tutorialStep + 1} из 3
+                Quick Guide · Step {state.tutorialStep + 1} of 3
               </div>
               <div className="text-xs sm:text-sm font-semibold leading-snug mt-0.5">
                 {state.tutorialStep === 0 &&
-                  'Перетащи одного Котёнка Моти на другого, чтобы объединить их!'}
+                  'Drag one Mochi Kitten onto another matching kitten to merge them!'}
                 {state.tutorialStep === 1 &&
-                  'Нажми на подарочную коробку на доске, чтобы открыть кота!'}
+                  'Tap the mystery crate on the board to unbox a new cat!'}
                 {state.tutorialStep === 2 &&
-                  'Нажимай на резку мыла для релакса, лови Золотую Мышь и крути Колесо Удачи!'}
+                  'Tap the side Soap Slicer to chill, catch the Golden Mouse, and spin the Lucky Wheel!'}
               </div>
             </div>
             {state.tutorialStep < 2 ? (
@@ -1944,14 +1940,14 @@ export default function App() {
                 }
                 className="shrink-0 rounded-lg border border-current/15 px-3 py-1.5 text-xs font-semibold hover:bg-current/5 transition-colors whitespace-nowrap"
               >
-                Дальше
+                Next
               </button>
             ) : (
               <button
                 onClick={handleFinishTutorial}
                 className="shrink-0 rounded-lg bg-[#0FA968] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#0C8E57] transition-colors whitespace-nowrap"
               >
-                Погнали! (+20 С)
+                Let’s Go! (+20 G)
               </button>
             )}
           </div>
@@ -1969,7 +1965,7 @@ export default function App() {
         >
           <div className="flex items-center gap-2 rounded-xl border border-amber-600/30 bg-amber-400 px-3.5 py-1.5 text-xs font-extrabold text-slate-950 shadow-lg whitespace-nowrap">
             <MousePointerClick className="h-4 w-4" />
-            <span>Золотая Мышь на доске — нажми на неё!</span>
+            <span>Golden Mouse on the board — tap it!</span>
           </div>
         </div>
       )}
@@ -2019,24 +2015,23 @@ export default function App() {
         </div>
       )}
 
-      {/* Collapsible Unified Bottom Action Dock (Touch-Friendly & Responsive) */}
+      {/* Collapsible Unified Bottom Action Dock */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex flex-col items-center px-2.5 sm:px-4 pb-[max(0.65rem,env(safe-area-inset-bottom))]">
-        {/* Optional Stray Elite Cat Rewarded Ad Opportunity */}
         {strayCatActive && state.tutorialStep >= 2 && (
           <button
             onClick={() =>
               openRewardedAd({
                 id: 'bonus_cat',
-                title: 'Заблудившийся Элитный Кот',
-                description: `Посмотри короткий ролик, чтобы сразу получить Кота Ур. ${Math.min(12, spawnLevel + 2)} на доску!`,
-                rewardLabel: `Кот Ур. ${Math.min(12, spawnLevel + 2)} сразу на доску`,
+                title: 'Stray Elite Cat',
+                description: `Watch a short rewarded video to immediately deploy a Tier ${Math.min(12, spawnLevel + 2)} Cat onto your board!`,
+                rewardLabel: `Tier ${Math.min(12, spawnLevel + 2)} Cat Instant Drop`,
               })
             }
             className="pointer-events-auto mb-1.5 flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-slate-950 shadow-lg hover:bg-amber-400 transition-colors whitespace-nowrap"
           >
             <Play className="h-3.5 w-3.5 fill-current shrink-0" />
             <span>
-              Бонус: Кот Ур. {Math.min(12, spawnLevel + 2)} (Рекл)
+              Free Cat Tier {Math.min(12, spawnLevel + 2)} (Ad)
             </span>
           </button>
         )}
@@ -2048,12 +2043,12 @@ export default function App() {
           {dockCollapsed ? (
             <>
               <ChevronUp className="h-3.5 w-3.5" />
-              <span>Панель</span>
+              <span>Controls</span>
             </>
           ) : (
             <>
               <ChevronDown className="h-3.5 w-3.5" />
-              <span>Скрыть</span>
+              <span>Hide</span>
             </>
           )}
         </button>
@@ -2062,10 +2057,10 @@ export default function App() {
           <div
             className={`pointer-events-auto flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 rounded-2xl border p-1.5 sm:p-2.5 shadow-lg max-w-[96vw] ${hudSurface}`}
           >
-            {/* Primary Buy Cat CTA with Live Affordability Progress */}
+            {/* Primary Buy Cat CTA */}
             <button
               onClick={() => handleBuyCat(spawnLevel)}
-              className={`relative overflow-hidden flex min-h-[44px] items-center gap-2 rounded-xl px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+              className={`relative overflow-hidden flex min-h-[44px] items-center gap-2 rounded-xl px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-bold transition-all active:scale-[0.97] whitespace-nowrap ${
                 state.coins >= spawnCost && hasEmptySlot
                   ? flashSaleActive
                     ? 'bg-[#0FA968] text-white hover:bg-[#0C8E57]'
@@ -2080,9 +2075,9 @@ export default function App() {
                 />
               )}
               <Plus className="relative h-4 w-4 shrink-0" />
-              <span className="relative">Кот Ур. {spawnLevel}</span>
+              <span className="relative">Cat Tier {spawnLevel}</span>
               <span className="relative font-mono-num text-xs opacity-90">
-                · {formatCoins(spawnCost)} М{flashSaleActive ? ' -30%' : ''}
+                · {formatCoins(spawnCost)} C{flashSaleActive ? ' -30%' : ''}
               </span>
             </button>
 
@@ -2090,21 +2085,21 @@ export default function App() {
             <button
               disabled={!canAutoMerge}
               onClick={handleAutoMerge}
-              className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 sm:px-4 py-2.5 text-xs font-bold transition-colors whitespace-nowrap ${
+              className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 sm:px-4 py-2.5 text-xs font-bold transition-all active:scale-[0.97] whitespace-nowrap ${
                 canAutoMerge
                   ? 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/25'
                   : 'border-current/10 opacity-40 cursor-not-allowed'
               }`}
             >
               <Zap className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Авто-слияние</span>
-              <span className="sm:hidden">Слить</span>
+              <span className="hidden sm:inline">Auto-Merge</span>
+              <span className="sm:hidden">Merge</span>
               <span className="font-mono-num">
                 {state.autoMergeCharges > 0
                   ? `(${state.autoMergeCharges})`
                   : state.gems >= 10
-                    ? '· 10С'
-                    : '· Рекл'}
+                    ? '· 10G'
+                    : '· Ad'}
               </span>
             </button>
 
@@ -2114,37 +2109,37 @@ export default function App() {
               onClick={() =>
                 openRewardedAd({
                   id: 'crate_frenzy',
-                  title: 'Дождь Посылок и Котов',
+                  title: 'Crate & Cat Frenzy',
                   description:
-                    'Посмотри ролик и сразу высади до 5 котов и подарочных коробок на пустые клетки для быстрых слияний!',
-                  rewardLabel: 'До +5 Котов/Коробок сразу',
+                    'Watch a short rewarded video to drop up to 5 cats and mystery crates onto empty tiles immediately!',
+                  rewardLabel: 'Up to +5 Cats & Crates',
                 })
               }
-              className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors whitespace-nowrap ${
+              className={`flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-all active:scale-[0.97] whitespace-nowrap ${
                 crateFrenzyCooldownLeft === 0
                   ? 'border-indigo-500/40 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-500/25'
                   : 'border-current/10 opacity-45 cursor-not-allowed'
               }`}
-              title="Получить волну котов и посылок за просмотр рекламы"
+              title="Watch an ad to drop a wave of cats and crates"
             >
               <Gift className="h-4 w-4 shrink-0" />
               <span className="font-mono-num">
                 {crateFrenzyCooldownLeft > 0
-                  ? `${crateFrenzyCooldownLeft}с`
-                  : 'Посылки (Рекл)'}
+                  ? `${crateFrenzyCooldownLeft}s`
+                  : 'Crates (Ad)'}
               </span>
             </button>
 
-            {/* Rewarded Ad Boost x2 */}
+            {/* Rewarded Ad: x2 Income for 2 min */}
             <button
               disabled={doubleActive}
               onClick={() =>
                 openRewardedAd({
                   id: 'double_income',
-                  title: 'x2 Доход на 2 мин',
+                  title: 'x2 Income for 2 min',
                   description:
-                    'Посмотри короткий ролик: удвой доход котов и скорость появления посылок на 2 минуты (120с) + получи мгновенный бонус монет!',
-                  rewardLabel: 'x2 Доход и Посылки на 2 минуты',
+                    'Watch a short rewarded video to double all cat income and crate drop speed for 2 minutes (120s), plus get an instant coin burst!',
+                  rewardLabel: 'x2 Income & Crates for 2 min',
                 })
               }
               className={`flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 sm:px-4 py-2.5 text-xs font-bold transition-all active:scale-[0.97] whitespace-nowrap ${
@@ -2155,7 +2150,7 @@ export default function App() {
             >
               <Play className="h-3.5 w-3.5 fill-current shrink-0" />
               <span>
-                {doubleActive ? `x2 (${doubleSecondsLeft}с)` : 'x2 Доход на 2 мин'}
+                {doubleActive ? `x2 (${doubleSecondsLeft}s)` : 'x2 Income for 2 min'}
               </span>
             </button>
           </div>
@@ -2175,7 +2170,15 @@ export default function App() {
         onBuyUpgrade={handleBuyUpgrade}
         onBuyTheme={handleBuyTheme}
         onBuyVipPack={handleBuyVipPack}
-        onBuyGemPack={(gems) => handleBuyGemPack(gems)}
+        onWatchAdForGems={() =>
+          openRewardedAd({
+            id: 'gem_pouch',
+            title: 'Free Gem Pouch',
+            description:
+              'Watch a short rewarded video to receive +35 Gems plus +5 Bonus Gems!',
+            rewardLabel: '+40 Gems Instant',
+          })
+        }
         onClaimDiscovery={handleClaimDiscovery}
         onClaimMission={handleClaimMission}
         onClaimDailyMission={handleClaimDailyMission}
@@ -2186,10 +2189,10 @@ export default function App() {
         onWatchAdForTicket={() =>
           openRewardedAd({
             id: 'spin_ticket',
-            title: 'Билет Колеса Удачи',
+            title: 'Lucky Wheel Ticket',
             description:
-              'Посмотри короткий спонсорский ролик, чтобы получить бесплатный билет на Колесо Удачи!',
-            rewardLabel: '+1 Билет Удачи',
+              'Watch a short rewarded video to earn a free spin ticket for the Lucky Wheel!',
+            rewardLabel: '+1 Lucky Ticket',
           })
         }
         onClaimDaily={handleClaimDaily}

@@ -46,7 +46,7 @@ interface GameModalsProps {
   onBuyUpgrade: (kind: 'spawnLevel' | 'incomeMultiplierLevel' | 'crateSpeedLevel') => void;
   onBuyTheme: (themeId: BoardThemeId) => void;
   onBuyVipPack: () => void;
-  onBuyGemPack: (gems: number) => void;
+  onWatchAdForGems: () => void;
   onClaimDiscovery: (level: number) => void;
   onClaimMission: (missionId: string) => void;
   onClaimDailyMission: (missionId: string) => void;
@@ -71,7 +71,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
   onBuyUpgrade,
   onBuyTheme,
   onBuyVipPack,
-  onBuyGemPack,
+  onWatchAdForGems,
   onClaimDiscovery,
   onClaimMission,
   onClaimDailyMission,
@@ -133,7 +133,6 @@ export const GameModals: React.FC<GameModalsProps> = ({
     const sectorCount = WHEEL_SECTORS.length;
     const chosenIdx = Math.floor(Math.random() * sectorCount);
     const sectorAngle = 360 / sectorCount;
-    // Align chosen sector center under top pointer (0 deg)
     const targetSectorCenter = chosenIdx * sectorAngle + sectorAngle / 2;
     const extraTurns = 360 * 5;
     const currentMod = wheelAngle % 360;
@@ -165,7 +164,6 @@ export const GameModals: React.FC<GameModalsProps> = ({
     state.totalMerges,
   );
 
-  // Conic gradient for 6 sectors
   const conicStops = WHEEL_SECTORS.map((s, idx) => {
     const start = (idx / WHEEL_SECTORS.length) * 100;
     const end = ((idx + 1) / WHEEL_SECTORS.length) * 100;
@@ -189,18 +187,18 @@ export const GameModals: React.FC<GameModalsProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-current/10">
           <h2 className="font-display text-lg font-bold tracking-tight">
-            {activeModal === 'shop' && 'Магазин и улучшения'}
-            {activeModal === 'catalog' && 'Каталог котов'}
-            {activeModal === 'missions' && 'Задания'}
-            {activeModal === 'fortune' && 'Удача, Бонусы и Престиж'}
-            {activeModal === 'offline' && 'С возвращением!'}
-            {activeModal === 'ad' && (adOffer?.title ?? 'Видео-бонус')}
+            {activeModal === 'shop' && 'Shop & Upgrades'}
+            {activeModal === 'catalog' && 'Cat Index'}
+            {activeModal === 'missions' && 'Missions & Achievements'}
+            {activeModal === 'fortune' && 'Luck, Daily & Cat Nirvana'}
+            {activeModal === 'offline' && 'Welcome Back!'}
+            {activeModal === 'ad' && (adOffer?.title ?? 'Video Bonus')}
           </h2>
           {activeModal !== 'ad' && !spinning && (
             <button
               onClick={onClose}
               className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-current/10 transition-colors"
-              aria-label="Закрыть"
+              aria-label="Close"
             >
               <X className="h-5 w-5" />
             </button>
@@ -222,7 +220,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Колесо Удачи
+                  Lucky Wheel
                 </button>
                 <button
                   disabled={spinning}
@@ -233,7 +231,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Бонус дня {canClaimDaily ? '· !' : ''}
+                  Daily Bonus {canClaimDaily ? '· !' : ''}
                 </button>
                 <button
                   disabled={spinning}
@@ -244,20 +242,19 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Нирвана
+                  Cat Nirvana
                 </button>
               </div>
 
               {fortuneTab === 'wheel' && (
                 <div className="flex flex-col items-center gap-4">
                   <div className="text-xs font-medium opacity-75">
-                    Билетов: <span className="font-mono-num font-bold">{state.spinTickets}</span> ·
-                    Лови Золотых Мышей на доске ради билетов!
+                    Tickets: <span className="font-mono-num font-bold">{state.spinTickets}</span> ·
+                    Catch Golden Mice on the board for free tickets!
                   </div>
 
                   {/* Wheel Visual */}
                   <div className="relative h-60 w-60 flex items-center justify-center">
-                    {/* Top Pointer */}
                     <div
                       className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[16px] border-l-transparent border-r-transparent border-t-[#171B26] dark:border-t-white drop-shadow"
                     />
@@ -298,7 +295,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
 
                   {lastWonSector && (
                     <div className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 px-4 py-2 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                      Выигрыш: {lastWonSector.label}!
+                      Prize Won: {lastWonSector.label}!
                     </div>
                   )}
 
@@ -314,7 +311,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       }`}
                     >
                       <Ticket className="h-4 w-4" />
-                      <span>Крутить (1 билет)</span>
+                      <span>Spin (1 Ticket)</span>
                     </button>
 
                     <button
@@ -327,7 +324,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       }`}
                     >
                       <Gem className="h-4 w-4" />
-                      <span>15 Самоцв.</span>
+                      <span>15 Gems</span>
                     </button>
 
                     <button
@@ -336,7 +333,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg border border-current/15 text-xs font-semibold hover:bg-current/5 transition-colors"
                     >
                       <Play className="h-3.5 w-3.5 fill-current" />
-                      <span>+1 Билет (Реклама)</span>
+                      <span>+1 Ticket (Ad)</span>
                     </button>
                   </div>
                 </div>
@@ -358,7 +355,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                           } ${isDone ? 'opacity-55' : ''}`}
                         >
                           <div className={`text-[11px] font-bold ${mutedText}`}>
-                            День {item.day}
+                            Day {item.day}
                           </div>
                           <Gift
                             className={`h-5 w-5 ${
@@ -372,7 +369,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                           <div className="text-xs font-bold leading-tight">{item.label}</div>
                           {isDone && (
                             <span className="text-[10px] font-semibold text-emerald-500">
-                              Получено
+                              Claimed
                             </span>
                           )}
                         </div>
@@ -389,8 +386,8 @@ export const GameModals: React.FC<GameModalsProps> = ({
                     }`}
                   >
                     {canClaimDaily
-                      ? `Забрать награду дня ${state.streakDay + 1}`
-                      : 'Награда на сегодня уже получена'}
+                      ? `Claim Day ${state.streakDay + 1} Reward`
+                      : 'Today’s reward already claimed'}
                   </button>
                 </div>
               )}
@@ -402,24 +399,24 @@ export const GameModals: React.FC<GameModalsProps> = ({
                   </div>
                   <div>
                     <div className="font-display font-bold text-base">
-                      Кото-Нирвана (Престиж)
+                      Cat Nirvana (Prestige)
                     </div>
                     <p className={`text-xs mt-1 max-w-md mx-auto ${mutedText}`}>
-                      Сбрось доску и монеты, чтобы получить Золотых Рыбок. Каждая рыбка
-                      увеличивает весь доход на <strong className="text-current">+50% навсегда</strong>!
-                      Самоцветы, темы доски и билеты сохраняются.
+                      Reset your board and coins to earn Golden Fish. Every Golden Fish
+                      permanently boosts all income by <strong className="text-current">+50%</strong>!
+                      Gems, board themes, and spin tickets are kept.
                     </p>
                   </div>
 
                   <div className={`grid grid-cols-2 gap-3 rounded-lg border p-3.5 ${subSurface}`}>
                     <div>
-                      <div className={`text-[11px] ${mutedText}`}>Сейчас рыбок</div>
+                      <div className={`text-[11px] ${mutedText}`}>Current Fish</div>
                       <div className="font-mono-num font-bold text-lg">
                         {state.goldenFish} (+{state.goldenFish * 50}%)
                       </div>
                     </div>
                     <div>
-                      <div className={`text-[11px] ${mutedText}`}>Получишь сейчас</div>
+                      <div className={`text-[11px] ${mutedText}`}>Claim Now</div>
                       <div className="font-mono-num font-bold text-lg text-amber-500">
                         +{pendingFish}
                       </div>
@@ -436,8 +433,8 @@ export const GameModals: React.FC<GameModalsProps> = ({
                     }`}
                   >
                     {pendingFish > 0
-                      ? `Переродиться (+${pendingFish} Золотых Рыбок)`
-                      : 'Открой кота 6 ур. (Кибер-Кот) для Нирваны'}
+                      ? `Ascend (+${pendingFish} Golden Fish)`
+                      : 'Unlock Tier 6 (Cyber Neko) for Cat Nirvana'}
                   </button>
                 </div>
               )}
@@ -456,7 +453,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Улучшения
+                  Upgrades
                 </button>
                 <button
                   onClick={() => setShopTab('cats')}
@@ -466,7 +463,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Купить кота
+                  Buy Cats
                 </button>
                 <button
                   onClick={() => setShopTab('vip')}
@@ -476,7 +473,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  VIP и Темы
+                  Themes & Packs
                 </button>
               </div>
 
@@ -490,9 +487,9 @@ export const GameModals: React.FC<GameModalsProps> = ({
                     return (
                       <div className={`flex items-center justify-between gap-4 rounded-lg border p-3.5 ${subSurface}`}>
                         <div>
-                          <div className="font-semibold text-sm">Уровень призыва</div>
+                          <div className="font-semibold text-sm">Spawn Tier</div>
                           <div className={`text-xs mt-0.5 ${mutedText}`}>
-                            Сейчас: Ур. {state.upgrades.spawnLevel} · Новые коты сразу сильнее
+                            Current: Tier {state.upgrades.spawnLevel} · New cats spawn stronger
                           </div>
                         </div>
                         <button
@@ -504,7 +501,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                               : 'bg-current/10 opacity-45 cursor-not-allowed'
                           }`}
                         >
-                          {maxed ? 'МАКС.' : `${formatCoins(cost.amount)} М`}
+                          {maxed ? 'MAX' : `${formatCoins(cost.amount)} C`}
                         </button>
                       </div>
                     );
@@ -521,9 +518,9 @@ export const GameModals: React.FC<GameModalsProps> = ({
                     return (
                       <div className={`flex items-center justify-between gap-4 rounded-lg border p-3.5 ${subSurface}`}>
                         <div>
-                          <div className="font-semibold text-sm">Бонус дохода (+25%)</div>
+                          <div className="font-semibold text-sm">Income Multiplier (+25%)</div>
                           <div className={`text-xs mt-0.5 ${mutedText}`}>
-                            Ур. {state.upgrades.incomeMultiplierLevel} · Текущий бонус +{bonusPct}%
+                            Lv. {state.upgrades.incomeMultiplierLevel} · Current bonus +{bonusPct}%
                           </div>
                         </div>
                         <button
@@ -535,7 +532,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                               : 'bg-current/10 opacity-45 cursor-not-allowed'
                           }`}
                         >
-                          {formatCoins(cost.amount)} М
+                          {formatCoins(cost.amount)} C
                         </button>
                       </div>
                     );
@@ -553,9 +550,9 @@ export const GameModals: React.FC<GameModalsProps> = ({
                     return (
                       <div className={`flex items-center justify-between gap-4 rounded-lg border p-3.5 ${subSurface}`}>
                         <div>
-                          <div className="font-semibold text-sm">Ускорение посылок</div>
+                          <div className="font-semibold text-sm">Crate Delivery Speed</div>
                           <div className={`text-xs mt-0.5 ${mutedText}`}>
-                            Бесплатный ящик каждые {interval} сек
+                            Free crate drops every {interval} sec
                           </div>
                         </div>
                         <button
@@ -568,7 +565,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                           }`}
                         >
                           {maxed ? (
-                            'МАКС.'
+                            'MAX'
                           ) : (
                             <>
                               <Gem className="h-3.5 w-3.5" />
@@ -586,7 +583,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                 <div className="space-y-2.5">
                   {state.flashSaleUntil > Date.now() && (
                     <div className="rounded-lg border border-emerald-500/35 bg-emerald-500/12 px-3 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-300">
-                      Счастливый купон: скидка -30% на всех котов прямо сейчас!
+                      Lucky Coupon Active: -30% off all cat purchases right now!
                     </div>
                   )}
                   {CAT_TIERS.filter((t) => t.level <= state.highestUnlockedLevel).map(
@@ -609,10 +606,10 @@ export const GameModals: React.FC<GameModalsProps> = ({
                             />
                             <div className="min-w-0">
                               <div className="font-semibold text-sm truncate">
-                                Ур. {tier.level} · {tier.name}
+                                Tier {tier.level} · {tier.name}
                               </div>
                               <div className={`text-xs font-mono-num ${mutedText}`}>
-                                +{formatCoins(tier.incomePerSec)}/сек
+                                +{formatCoins(tier.incomePerSec)}/sec
                               </div>
                             </div>
                           </div>
@@ -627,7 +624,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                                 : 'bg-current/10 opacity-45 cursor-not-allowed'
                             }`}
                           >
-                            {formatCoins(price)} М{flashSaleOn ? ' -30%' : ''}
+                            {formatCoins(price)} C{flashSaleOn ? ' -30%' : ''}
                           </button>
                         </div>
                       );
@@ -638,67 +635,62 @@ export const GameModals: React.FC<GameModalsProps> = ({
 
               {shopTab === 'vip' && (
                 <div className="space-y-4">
-                  {/* Starter VIP Pack */}
+                  {/* Starter VIP Pack (Unlocked with Gems) */}
                   <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex items-center justify-between gap-4">
                     <div>
                       <div className="font-display font-bold text-sm text-amber-600 dark:text-amber-400">
-                        Набор PS2 VIP Старт
+                        PS2 VIP Starter Bundle
                       </div>
                       <div className={`text-xs mt-1 ${mutedText}`}>
-                        +150 Самоцветов · 5 Авто-слияний · 3 Билета · 25 000 Монет
+                        5 Auto-Merges · 3 Spin Tickets · 25,000 Coins
                       </div>
                     </div>
                     <button
-                      disabled={state.vipPackOwned}
+                      disabled={state.vipPackOwned || state.gems < 80}
                       onClick={onBuyVipPack}
-                      className={`shrink-0 px-4 py-2.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
+                      className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
                         state.vipPackOwned
                           ? 'bg-current/15 opacity-60 cursor-default'
-                          : 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                          : state.gems >= 80
+                            ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
+                            : 'bg-current/10 opacity-45 cursor-not-allowed'
                       }`}
                     >
-                      {state.vipPackOwned ? 'Куплено' : '199 ₽'}
+                      {state.vipPackOwned ? (
+                        'Owned'
+                      ) : (
+                        <>
+                          <Gem className="h-3.5 w-3.5" />
+                          <span>80</span>
+                        </>
+                      )}
                     </button>
                   </div>
 
-                  {/* Gem Packs */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className={`rounded-lg border p-3.5 flex flex-col justify-between gap-3 ${subSurface}`}>
-                      <div>
-                        <div className="flex items-center gap-1.5 font-bold text-sm">
-                          <Gem className="h-4 w-4 text-emerald-500" />
-                          <span>80 Самоцветов</span>
-                        </div>
-                        <div className={`text-xs mt-1 ${mutedText}`}>Горсть кристаллов</div>
+                  {/* Rewarded Ad Free Gem Pouch */}
+                  <div className={`rounded-lg border p-3.5 flex items-center justify-between gap-3 ${subSurface}`}>
+                    <div>
+                      <div className="flex items-center gap-1.5 font-bold text-sm">
+                        <Gem className="h-4 w-4 text-emerald-500" />
+                        <span>Free Gem Pouch (+35 Gems)</span>
                       </div>
-                      <button
-                        onClick={() => onBuyGemPack(80)}
-                        className="w-full py-2 rounded-lg bg-[#0FA968] text-white text-xs font-bold hover:bg-[#0C8E57] transition-colors"
-                      >
-                        99 ₽
-                      </button>
-                    </div>
-                    <div className={`rounded-lg border p-3.5 flex flex-col justify-between gap-3 ${subSurface}`}>
-                      <div>
-                        <div className="flex items-center gap-1.5 font-bold text-sm">
-                          <Gem className="h-4 w-4 text-emerald-500" />
-                          <span>350 Самоцветов</span>
-                        </div>
-                        <div className={`text-xs mt-1 ${mutedText}`}>Выгода +40%</div>
+                      <div className={`text-xs mt-0.5 ${mutedText}`}>
+                        Watch a short rewarded video to claim instant Gems
                       </div>
-                      <button
-                        onClick={() => onBuyGemPack(350)}
-                        className="w-full py-2 rounded-lg bg-[#0FA968] text-white text-xs font-bold hover:bg-[#0C8E57] transition-colors"
-                      >
-                        299 ₽
-                      </button>
                     </div>
+                    <button
+                      onClick={onWatchAdForGems}
+                      className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0FA968] text-white text-xs font-bold hover:bg-[#0C8E57] transition-colors whitespace-nowrap"
+                    >
+                      <Play className="h-3.5 w-3.5 fill-current" />
+                      <span>+35 Gems (Ad)</span>
+                    </button>
                   </div>
 
                   {/* Board Themes */}
                   <div className="space-y-2">
                     <div className="text-xs font-semibold uppercase tracking-wider opacity-60">
-                      Стиль 3D-доски
+                      3D Board Theme
                     </div>
                     <div className="space-y-2">
                       {BOARD_THEMES.map((theme) => {
@@ -728,10 +720,10 @@ export const GameModals: React.FC<GameModalsProps> = ({
                               }`}
                             >
                               {isActive
-                                ? 'Активна'
+                                ? 'Active'
                                 : theme.priceGems === 0
-                                  ? 'Выбрать'
-                                  : `${theme.priceGems} С`}
+                                  ? 'Select'
+                                  : `${theme.priceGems} G`}
                             </button>
                           </div>
                         );
@@ -764,12 +756,12 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       </div>
                       <div className="min-w-0">
                         <div className="font-semibold text-sm truncate">
-                          {unlocked ? tier.name : 'Неизвестный кот'}
+                          {unlocked ? tier.name : 'Undiscovered Cat'}
                         </div>
                         <div className={`text-xs truncate ${mutedText}`}>
                           {unlocked
-                            ? `${tier.title} · +${formatCoins(tier.incomePerSec)}/с`
-                            : 'Объединяй котов для открытия'}
+                            ? `${tier.title} · +${formatCoins(tier.incomePerSec)}/s`
+                            : 'Merge cats to unlock'}
                         </div>
                       </div>
                     </div>
@@ -803,7 +795,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Миссии дня
+                  Daily Missions
                 </button>
                 <button
                   onClick={() => setMissionsTab('achievements')}
@@ -813,7 +805,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       : `${mutedText} hover:text-current`
                   }`}
                 >
-                  Достижения
+                  Achievements
                 </button>
               </div>
 
@@ -832,10 +824,10 @@ export const GameModals: React.FC<GameModalsProps> = ({
                       <div className="min-w-0">
                         <div className="font-display font-bold text-sm flex items-center gap-1.5 text-amber-600 dark:text-amber-300">
                           <Gift className="h-4 w-4 shrink-0" />
-                          <span>Сундук дня ({completedCount}/{DAILY_MISSIONS.length})</span>
+                          <span>Daily Chest ({completedCount}/{DAILY_MISSIONS.length})</span>
                         </div>
                         <div className={`text-xs mt-0.5 ${mutedText}`}>
-                          Выполни все миссии дня: +60 Самоцветов и +1 Билет Удачи
+                          Complete all daily tasks: +60 Gems & +1 Lucky Ticket
                         </div>
                       </div>
                       <button
@@ -850,9 +842,9 @@ export const GameModals: React.FC<GameModalsProps> = ({
                         }`}
                       >
                         {state.dailyChestClaimed
-                          ? 'Открыт'
+                          ? 'Opened'
                           : chestReady
-                            ? 'Забрать!'
+                            ? 'Claim!'
                             : `${completedCount}/${DAILY_MISSIONS.length}`}
                       </button>
                     </div>
@@ -895,8 +887,8 @@ export const GameModals: React.FC<GameModalsProps> = ({
                           >
                             <Gem className="h-3.5 w-3.5" />
                             {claimed
-                              ? 'Получено'
-                              : `+${dm.rewardGems}${dm.rewardTickets ? ` · +${dm.rewardTickets}Б` : ''}`}
+                              ? 'Claimed'
+                              : `+${dm.rewardGems}${dm.rewardTickets ? ` · +${dm.rewardTickets}T` : ''}`}
                           </button>
                         </div>
                       );
@@ -951,7 +943,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                           }`}
                         >
                           <Gem className="h-3.5 w-3.5" />
-                          {claimed ? 'Получено' : `+${m.rewardGems}`}
+                          {claimed ? 'Claimed' : `+${m.rewardGems}`}
                         </button>
                       </div>
                     );
@@ -968,7 +960,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
               </div>
               <div>
                 <div className={`text-sm ${mutedText}`}>
-                  Пока тебя не было, твои 3D-коты заработали:
+                  While you were away, your 3D cats earned:
                 </div>
                 <div className="font-display font-extrabold text-3xl font-mono-num mt-1.5">
                   +{formatCoins(offlineCoins)}
@@ -979,14 +971,14 @@ export const GameModals: React.FC<GameModalsProps> = ({
                   onClick={() => onClaimOffline(false)}
                   className="flex-1 py-3 px-4 rounded-lg border border-current/15 font-semibold text-sm hover:bg-current/5 transition-colors"
                 >
-                  Забрать
+                  Collect
                 </button>
                 <button
                   onClick={() => onClaimOffline(true)}
                   className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#0FA968] text-white font-bold text-sm hover:bg-[#0C8E57] transition-colors"
                 >
                   <Play className="h-4 w-4 fill-current" />
-                  Забрать x2 (Реклама)
+                  Claim 2x (Watch Ad)
                 </button>
               </div>
             </div>
@@ -1010,13 +1002,13 @@ export const GameModals: React.FC<GameModalsProps> = ({
                 <p className={`text-sm mt-1 ${mutedText}`}>{adOffer.description}</p>
                 <div className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-500/12 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   <Gem className="h-3.5 w-3.5" />
-                  <span>Бонус за просмотр: +5 Самоцветов</span>
+                  <span>Bonus Reward: +5 Gems</span>
                 </div>
               </div>
               <div className={`rounded-lg border p-3 text-xs font-mono-num ${subSurface}`}>
                 {adSecondsLeft > 0
-                  ? `Спонсорский ролик закончится через ${adSecondsLeft} сек...`
-                  : 'Награда готова к получению!'}
+                  ? `Rewarded preview finishing in ${adSecondsLeft}s...`
+                  : 'Reward ready to claim!'}
               </div>
               <button
                 disabled={adSecondsLeft > 0}
@@ -1027,7 +1019,7 @@ export const GameModals: React.FC<GameModalsProps> = ({
                     : 'bg-[#0FA968] text-white hover:bg-[#0C8E57]'
                 }`}
               >
-                {adSecondsLeft > 0 ? `Подождите (${adSecondsLeft}с)` : 'Получить награду (+5 С)'}
+                {adSecondsLeft > 0 ? `Please wait (${adSecondsLeft}s)` : 'Claim Reward (+5 G)'}
               </button>
             </div>
           )}

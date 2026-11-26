@@ -144,7 +144,14 @@ export type ActiveModal =
   | 'ad';
 
 export interface RewardedAdOffer {
-  id: 'double_income' | 'bonus_cat' | 'auto_merge' | 'spin_ticket' | 'crate_frenzy' | 'offline_double';
+  id:
+    | 'double_income'
+    | 'bonus_cat'
+    | 'auto_merge'
+    | 'spin_ticket'
+    | 'crate_frenzy'
+    | 'offline_double'
+    | 'gem_pouch';
   title: string;
   description: string;
   rewardLabel: string;
